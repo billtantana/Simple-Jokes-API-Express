@@ -33,10 +33,37 @@ This project keeps its data in memory, so any changes you make are reset when th
 npm install
 ```
 
+### Environment Setup
+
+Create a local `.env` file from `.env.example`, then update the values as needed.
+
+macOS/Linux:
+
+```bash
+cp .env.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Then edit `.env` and set:
+
+- `MASTER_KEY` to your preferred secret key
+- `PORT` to the port you want the API to run on
+
 ### Run the Server
 
 ```bash
 npm start
+```
+
+For development with auto-restart:
+
+```bash
+npm run dev
 ```
 
 The API runs on:
@@ -165,16 +192,16 @@ curl -X DELETE http://localhost:3000/jokes/1
 
 Deletes all jokes if the correct master key is supplied.
 
-Current key in `index.js`:
+Set `MASTER_KEY` in your `.env` file:
 
 ```text
-4VGP2DN-6EWM4SJ-N6FGRHV-Z3PR3TT
+MASTER_KEY=your-secret-key
 ```
 
 Example:
 
 ```bash
-curl -X DELETE "http://localhost:3000/all?key=4VGP2DN-6EWM4SJ-N6FGRHV-Z3PR3TT"
+curl -X DELETE "http://localhost:3000/all?key=your-secret-key"
 ```
 
 ## Notes
@@ -188,6 +215,8 @@ curl -X DELETE "http://localhost:3000/all?key=4VGP2DN-6EWM4SJ-N6FGRHV-Z3PR3TT"
 ```bash
 npm start
 ```
+
+`npm run dev` starts the server with `nodemon` for automatic restarts during development.
 
 ## Project Structure
 
