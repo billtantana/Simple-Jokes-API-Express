@@ -2,7 +2,10 @@
 
 A small REST API built with Express for serving and managing a collection of jokes.
 
-This project keeps its data in memory, so any changes you make are reset when the server restarts.
+This repo now includes two app modes:
+
+- `index-contained.js`: an in-memory version for learning and quick testing
+- `index-postgres.js`: a PostgreSQL-backed version with persistent data
 
 ## Features
 
@@ -19,6 +22,7 @@ This project keeps its data in memory, so any changes you make are reset when th
 
 - Node.js
 - Express
+- PostgreSQL
 
 ## Getting Started
 
@@ -26,6 +30,7 @@ This project keeps its data in memory, so any changes you make are reset when th
 
 - Node.js 18+ recommended
 - npm
+- PostgreSQL
 
 ### Installation
 
@@ -51,19 +56,79 @@ Copy-Item .env.example .env
 
 Then edit `.env` and set:
 
+- `DATABASE` to your PostgreSQL database name
+- `DB_USER` to your PostgreSQL username
+- `DB_PASSWORD` to your PostgreSQL password
 - `MASTER_KEY` to your preferred secret key
 - `PORT` to the port you want the API to run on
 
-### Run the Server
+Example:
 
-```bash
-npm start
+```env
+DATABASE="jokes_db"
+DB_USER="postgres"
+DB_PASSWORD="your_password"
+MASTER_KEY="your-secret-key"
+PORT=3000
 ```
 
-For development with auto-restart:
+## Database Setup
+
+The database-backed app expects a `jokes` table with this structure:
+
+```sql
+CREATE TABLE jokes (
+  id INTEGER PRIMARY KEY,
+  joke_text TEXT NOT NULL,
+  joke_type VARCHAR(100) NOT NULL
+);
+```
+
+Initial joke data lives in [data/jokes.csv](/c:/Projects/Simple-Jokes-API-Express/data/jokes.csv).
+
+Import it into PostgreSQL after creating the table:
+
+```sql
+COPY jokes(id, joke_text, joke_type)
+FROM 'C:/Projects/Simple-Jokes-API-Express/data/jokes.csv'
+DELIMITER ','
+CSV HEADER;
+```
+
+If PostgreSQL cannot read files from that path directly, use `\copy` from `psql` instead:
+
+```bash
+\copy jokes(id, joke_text, joke_type) FROM 'C:/Projects/Simple-Jokes-API-Express/data/jokes.csv' WITH (FORMAT csv, HEADER true)
+```
+
+## Running The Apps
+
+### PostgreSQL-backed app
+
+Runs the API wired to PostgreSQL:
 
 ```bash
 npm run dev
+```
+
+Entry file:
+
+```text
+index-postgres.js
+```
+
+### In-memory app
+
+Runs the self-contained version that stores jokes in memory only:
+
+```bash
+npm run dev-contained
+```
+
+Entry file:
+
+```text
+index-contained.js
 ```
 
 The API runs on:
@@ -72,9 +137,28 @@ The API runs on:
 http://localhost:3000
 ```
 
+## Testing The API
+
+To try the endpoints manually, you will want an API client or HTTP client.
+
+Common options include:
+
+- Postman
+- Insomnia
+- Bruno
+- Hoppscotch
+
+You can also test with `curl` from the command line, and example requests are included below in the API section.
+
+## App Differences
+
+- The in-memory app resets to its original joke list every time the server restarts.
+- The PostgreSQL app persists changes in the database.
+- Both apps expose the same REST endpoints.
+
 ## Data Model
 
-Each joke uses the following shape:
+### In-memory responses
 
 ```json
 {
@@ -84,13 +168,21 @@ Each joke uses the following shape:
 }
 ```
 
+### PostgreSQL responses
+
+```json
+{
+  "id": 1,
+  "joke_text": "Why don't scientists trust atoms? Because they make up everything.",
+  "joke_type": "Science"
+}
+```
+
 ## API Endpoints
 
 ### `GET /random`
 
 Returns one random joke.
-
-Example:
 
 ```bash
 curl http://localhost:3000/random
@@ -100,8 +192,6 @@ curl http://localhost:3000/random
 
 Returns a specific joke by ID.
 
-Example:
-
 ```bash
 curl http://localhost:3000/jokes/1
 ```
@@ -109,8 +199,6 @@ curl http://localhost:3000/jokes/1
 ### `GET /filter?type=Science`
 
 Returns jokes that match the provided `type`.
-
-Example:
 
 ```bash
 curl "http://localhost:3000/filter?type=Science"
@@ -129,8 +217,6 @@ Request body:
 }
 ```
 
-Example:
-
 ```bash
 curl -X POST http://localhost:3000/jokes \
   -H "Content-Type: application/json" \
@@ -141,16 +227,12 @@ curl -X POST http://localhost:3000/jokes \
 
 Replaces an existing joke.
 
-Request body:
-
 ```json
 {
   "text": "Updated joke text",
   "type": "Updated type"
 }
 ```
-
-Example:
 
 ```bash
 curl -X PUT http://localhost:3000/jokes/1 \
@@ -162,15 +244,11 @@ curl -X PUT http://localhost:3000/jokes/1 \
 
 Updates one or more fields on an existing joke.
 
-Request body example:
-
 ```json
 {
   "text": "Only the text changed"
 }
 ```
-
-Example:
 
 ```bash
 curl -X PATCH http://localhost:3000/jokes/1 \
@@ -182,8 +260,6 @@ curl -X PATCH http://localhost:3000/jokes/1 \
 
 Deletes a specific joke by ID.
 
-Example:
-
 ```bash
 curl -X DELETE http://localhost:3000/jokes/1
 ```
@@ -192,38 +268,35 @@ curl -X DELETE http://localhost:3000/jokes/1
 
 Deletes all jokes if the correct master key is supplied.
 
-Set `MASTER_KEY` in your `.env` file:
-
-```text
-MASTER_KEY=your-secret-key
-```
-
-Example:
-
 ```bash
 curl -X DELETE "http://localhost:3000/all?key=your-secret-key"
 ```
 
-## Notes
-
-- Data is stored in a local array inside `index.js`.
-- This is a learning/demo project, not a production-ready API.
-- Since the data is not persisted, restarting the app restores the original 15 jokes.
-
 ## Scripts
 
 ```bash
-npm start
+npm run dev
 ```
 
-`npm run dev` starts the server with `nodemon` for automatic restarts during development.
+Starts the PostgreSQL-backed app.
+
+```bash
+npm run dev-contained
+```
+
+Starts the in-memory app.
 
 ## Project Structure
 
 ```text
 .
-|-- index.js
+|-- controllers/
+|-- data/
+|-- db/
+|-- routes/
+|-- utils/
+|-- index-contained.js
+|-- index-postgres.js
 |-- package.json
-|-- package-lock.json
 `-- README.md
 ```

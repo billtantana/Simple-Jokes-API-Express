@@ -1,7 +1,7 @@
+import "dotenv/config";
 import express from "express";
 import jokeRoutes from "./routes/jokesRoutes.js";
 
-// Simple Jokes API built with Express
 const app = express();
 const port = process.env.PORT || 3000;
 

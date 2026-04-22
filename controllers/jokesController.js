@@ -1,3 +1,12 @@
+import {
+  normalizeType,
+  validateTextLength,
+  findJokeById,
+  isDuplicateJokeText,
+  getValidatedId,
+  getValidatedJokeInput,
+} from "../utils/jokesUtils.js";
+
 let jokes = [
   {
     id: 1,
@@ -87,79 +96,6 @@ let jokes = [
   },
 ];
 
-function normalizeType(type) {
-  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
-}
-
-function validateTextLength(text) {
-  if (text.length < 3) {
-    return "Joke text is too short.";
-  }
-
-  if (text.length > 500) {
-    return "Joke is too long (max 500 chars).";
-  }
-
-  return null;
-}
-
-function findJokeById(id) {
-  return jokes.find((joke) => joke.id === id);
-}
-
-function isDuplicateJokeText(text, excludeId = null) {
-  return jokes.some(
-    (joke) =>
-      joke.jokeText.toLowerCase() === text.toLowerCase() &&
-      joke.id !== excludeId,
-  );
-}
-
-function getValidatedId(idParam, res) {
-  const jokeId = parseInt(idParam);
-
-  if (isNaN(jokeId)) {
-    res.status(400).json({ error: "Invalid id. Please provide a number." });
-    return null;
-  }
-
-  return jokeId;
-}
-
-function getValidatedJokeInput(req, res, excludeId = null) {
-  const rawText = req.body.text;
-  const rawType = req.body.type;
-
-  if (typeof rawText !== "string" || typeof rawType !== "string") {
-    res.status(400).json({ error: "Text and type must be strings." });
-    return null;
-  }
-
-  const text = rawText.trim();
-  const type = rawType.trim();
-
-  if (!type || !text) {
-    res.status(400).json({ error: "Text and type are required." });
-    return null;
-  }
-
-  const textLengthError = validateTextLength(text);
-  if (textLengthError) {
-    res.status(400).json({ error: textLengthError });
-    return null;
-  }
-
-  if (isDuplicateJokeText(text, excludeId)) {
-    res.status(409).json({ error: "This joke text already exists." });
-    return null;
-  }
-
-  return {
-    text,
-    type: normalizeType(type),
-  };
-}
-
 export function getRandomJoke(req, res) {
   if (jokes.length === 0) {
     return res.status(404).json({ error: "No jokes available." });
@@ -175,7 +111,7 @@ export function getJokeById(req, res) {
     return;
   }
 
-  const specificJoke = findJokeById(jokeId);
+  const specificJoke = findJokeById(jokeId, jokes);
 
   if (!specificJoke) {
     return res.status(404).json({ error: "Joke not found." });
@@ -206,7 +142,7 @@ export function filterJokes(req, res) {
 }
 
 export function createJoke(req, res) {
-  const cleanData = getValidatedJokeInput(req, res);
+  const cleanData = getValidatedJokeInput(req, res, null, jokes);
   if (!cleanData) {
     return;
   }
@@ -230,12 +166,12 @@ export function replaceJoke(req, res) {
     return;
   }
 
-  const cleanData = getValidatedJokeInput(req, res, jokeId);
+  const cleanData = getValidatedJokeInput(req, res, jokeId, jokes);
   if (!cleanData) {
     return;
   }
 
-  const foundJoke = findJokeById(jokeId);
+  const foundJoke = findJokeById(jokeId, jokes);
 
   if (!foundJoke) {
     return res.status(404).json({ error: "Joke not found." });
@@ -266,7 +202,7 @@ export function patchJoke(req, res) {
 
   const text = "text" in req.body ? req.body.text.trim() : null;
   const type = "type" in req.body ? req.body.type.trim() : null;
-  const foundJoke = findJokeById(jokeId);
+  const foundJoke = findJokeById(jokeId, jokes);
 
   if (!foundJoke) {
     return res.status(404).json({ error: "Joke not found." });
@@ -278,7 +214,7 @@ export function patchJoke(req, res) {
       return res.status(400).json({ error: textLengthError });
     }
 
-    if (isDuplicateJokeText(text, jokeId)) {
+    if (isDuplicateJokeText(text, jokeId, jokes)) {
       return res.status(409).json({ error: "This joke text already exists." });
     }
 
@@ -323,7 +259,7 @@ export function deleteAllJokes(req, res) {
   const masterKey = process.env.MASTER_KEY;
 
   if (jokes.length === 0) {
-    return res.status(404).json({ error: "No jokes available." });
+    return res.status(404).json({ error: "All out of Laughs, No jokes available." });
   }
 
   if (key === masterKey) {
